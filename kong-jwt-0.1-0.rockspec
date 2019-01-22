@@ -24,7 +24,7 @@ build = {
     ["kong.plugins.jwt.api"]  = "api.lua",
     ["kong.plugins.jwt.asn_sequence"]  = "asn_sequence.lua",
     ["kong.plugins.jwt.daos"]  = "daos.lua",
-    ["kong.plugins.jwt.claim_headers"]  = "claim_headers.lua"
+    ["kong.plugins.jwt.claim_headers"]  = "claim_headers.lua",
     ["kong.plugins.jwt.jwt_parser"]  = "jwt_parser.lua"
   }
 }
