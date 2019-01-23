@@ -3,7 +3,7 @@ version = "0.1-0"
 source = {
   url = "https://github.com/scmp/kong-jwt-custom/archive/v0.1.0.tar.gz",
   file = "v0.1.0.tar.gz",
-  dir = "kong-jwt-0.1.0",
+  dir = "kong-jwt-custom-0.1.0",
   tag = "v0.1.0"
 }
 description = {
