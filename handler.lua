@@ -2,9 +2,9 @@ local singletons = require "kong.singletons"
 local BasePlugin = require "kong.plugins.base_plugin"
 local responses = require "kong.tools.responses"
 local constants = require "kong.constants"
-local jwt_decoder = require "kong.plugins.jwt.jwt_parser"
+local jwt_decoder = require "kong.plugins.jwt_custom.jwt_parser"
 local jp = require "jsonpath"
-local CLAIM_HEADERS = require "kong.plugins.jwt.claim_headers"
+local CLAIM_HEADERS = require "kong.plugins.jwt_custom.claim_headers"
 
 local ipairs         = ipairs
 local string_format  = string.format
@@ -12,12 +12,12 @@ local ngx_re_gmatch  = ngx.re.gmatch
 local ngx_set_header = ngx.req.set_header
 local get_method     = ngx.req.get_method
 
-local JwtHandler = BasePlugin:extend()
+local JwtCustomHandler = BasePlugin:extend()
 
 -- Set this plugin to execute after the default jwt plugin provided by Kong
 -- Plugins with higher priority are executed first
-JwtHandler.PRIORITY = 1004
-JwtHandler.VERSION = "0.1.0"
+JwtCustomHandler.PRIORITY = 1004
+JwtCustomHandler.VERSION = "0.1.0"
 
 --- Retrieve a JWT in a request.
 -- Checks for the JWT in URI parameters, then in cookies, and finally
@@ -61,8 +61,8 @@ local function retrieve_token(request, conf)
   end
 end
 
-function JwtHandler:new()
-  JwtHandler.super.new(self, "jwt")
+function JwtCustomHandler:new()
+  JwtCustomHandler.super.new(self, "jwt_custom")
 end
 
 local function load_credential(jwt_secret_key)
@@ -208,8 +208,8 @@ function set_claim_headers(token)
   end
 end
 
-function JwtHandler:access(conf)
-  JwtHandler.super.access(self)
+function JwtCustomHandler:access(conf)
+  JwtCustomHandler.super.access(self)
 
   -- check if preflight request and whether it should be authenticated
   if not conf.run_on_preflight and get_method() == "OPTIONS" then
@@ -252,4 +252,4 @@ function JwtHandler:access(conf)
 end
 
 
-return JwtHandler
+return JwtCustomHandler
