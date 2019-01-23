@@ -10,7 +10,7 @@ local utils = require "kong.tools.utils"
 local openssl_digest = require "openssl.digest"
 local openssl_hmac = require "openssl.hmac"
 local openssl_pkey = require "openssl.pkey"
-local asn_sequence = require "kong.plugins.jwt_custom.asn_sequence"
+local asn_sequence = require "kong.plugins.jwt-custom.asn_sequence"
 
 local error = error
 local type = type

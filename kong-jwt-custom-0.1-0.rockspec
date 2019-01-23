@@ -1,4 +1,4 @@
-package = "kong-jwt"
+package = "kong-jwt-custom"
 version = "0.1-0"
 source = {
   url = "https://github.com/scmp/kong-jwt-custom/archive/v0.1.0.tar.gz",
@@ -19,12 +19,12 @@ dependencies = {
 build = {
   type = "builtin",
   modules = {
-    ["kong.plugins.jwt_custom.handler"] = "handler.lua",
-    ["kong.plugins.jwt_custom.schema"]  = "schema.lua",
-    ["kong.plugins.jwt_custom.api"]  = "api.lua",
-    ["kong.plugins.jwt_custom.asn_sequence"]  = "asn_sequence.lua",
-    ["kong.plugins.jwt_custom.daos"]  = "daos.lua",
-    ["kong.plugins.jwt_custom.claim_headers"]  = "claim_headers.lua",
-    ["kong.plugins.jwt_custom.jwt_parser"]  = "jwt_parser.lua"
+    ["kong.plugins.jwt-custom.handler"] = "handler.lua",
+    ["kong.plugins.jwt-custom.schema"]  = "schema.lua",
+    ["kong.plugins.jwt-custom.api"]  = "api.lua",
+    ["kong.plugins.jwt-custom.asn_sequence"]  = "asn_sequence.lua",
+    ["kong.plugins.jwt-custom.daos"]  = "daos.lua",
+    ["kong.plugins.jwt-custom.claim_headers"]  = "claim_headers.lua",
+    ["kong.plugins.jwt-custom.jwt_parser"]  = "jwt_parser.lua"
   }
 }

@@ -2,9 +2,9 @@ local singletons = require "kong.singletons"
 local BasePlugin = require "kong.plugins.base_plugin"
 local responses = require "kong.tools.responses"
 local constants = require "kong.constants"
-local jwt_decoder = require "kong.plugins.jwt_custom.jwt_parser"
+local jwt_decoder = require "kong.plugins.jwt-custom.jwt_parser"
 local jp = require "jsonpath"
-local CLAIM_HEADERS = require "kong.plugins.jwt_custom.claim_headers"
+local CLAIM_HEADERS = require "kong.plugins.jwt-custom.claim_headers"
 
 local ipairs         = ipairs
 local string_format  = string.format
@@ -62,7 +62,7 @@ local function retrieve_token(request, conf)
 end
 
 function JwtCustomHandler:new()
-  JwtCustomHandler.super.new(self, "jwt_custom")
+  JwtCustomHandler.super.new(self, "jwt-custom")
 end
 
 local function load_credential(jwt_secret_key)
