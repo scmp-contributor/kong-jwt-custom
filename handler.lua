@@ -188,7 +188,7 @@ local function do_authentication(conf)
   return true
 end
 
-function set_claim_headers(token)
+local function set_claim_headers(token)
   -- Do nothing if no token
   if token ~= nil then
     local jwt, err = jwt_decoder:new(token)
@@ -228,7 +228,7 @@ function JwtCustomHandler:access(conf)
     if token ~= nil then
       -- set claim headers
       set_claim_headers(token)
-    end 
+    end
   else
     if token ~= nil then
       -- if there is a token, do not fallback to anonymous
