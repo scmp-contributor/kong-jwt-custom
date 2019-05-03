@@ -1,7 +1,7 @@
 package = "kong-jwt-custom"
 version = "0.1-0"
 source = {
-  url = "https://github.com/scmp/kong-jwt-custom/archive/v0.1.0.tar.gz",
+  url = "https://github.com/scmp-contributor/kong-jwt-custom/archive/v0.1.0.tar.gz",
   file = "v0.1.0.tar.gz",
   dir = "kong-jwt-custom-0.1.0",
   tag = "v0.1.0"
@@ -9,7 +9,7 @@ source = {
 description = {
   summary = "A Kong JWT plugin with added claims to request headers",
   license = "MIT",
-  homepage = "https://github.com/scmp/kong-jwt-custom"
+  homepage = "https://github.com/scmp-contributor/kong-jwt-custom"
 }
 dependencies = {
   "lua ~> 5.1",
