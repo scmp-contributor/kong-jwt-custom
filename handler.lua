@@ -1,6 +1,6 @@
 local constants = require "kong.constants"
-local jwt_decoder = require "kong.plugins.jwt.jwt_parser"
-
+local jwt_decoder = require "kong.plugins.jwt-custom.jwt_parser"
+local claim_headers = require "kong.plugins.jwt-custom.claim_headers"
 
 local fmt = string.format
 local kong = kong
@@ -10,11 +10,11 @@ local tostring = tostring
 local re_gmatch = ngx.re.gmatch
 
 
-local JwtHandler = {}
+local JwtCustomHandler = {}
 
 
-JwtHandler.PRIORITY = 1005
-JwtHandler.VERSION = "2.1.0"
+JwtCustomHandler.PRIORITY = 1004
+JwtCustomHandler.VERSION = "2.1.0"
 
 
 --- Retrieve a JWT in a request.
@@ -225,8 +225,31 @@ local function do_authentication(conf)
   return true
 end
 
+local function set_claim_headers(token)
+  -- Do nothing if no token
+  if token ~= nil then
+    local jwt, err = jwt_decoder:new(token)
+    if not err then
+      if jwt ~= nil then
+        local claims = jwt.claims
+        if claims ~= nil then
+          for json_path, request_header in pairs(claim_headers) do
+            local claim_value = jp.value(claims, json_path)
+            if claim_value ~= nil then
+              ngx_set_header(request_header, claim_value)
+            end
+          end
+        end
+      end
+    end
+  end
+end
 
-function JwtHandler:access(conf)
+function JwtCustomHandler:new()
+  JwtCustomHandler.super.new(self, "jwt-custom")
+end
+
+function JwtCustomHandler:access(conf)
   -- check if preflight request and whether it should be authenticated
   if not conf.run_on_preflight and kong.request.get_method() == "OPTIONS" then
     return
@@ -239,25 +262,36 @@ function JwtHandler:access(conf)
   end
 
   local ok, err = do_authentication(conf)
-  if not ok then
-    if conf.anonymous then
-      -- get anonymous user
-      local consumer_cache_key = kong.db.consumers:cache_key(conf.anonymous)
-      local consumer, err      = kong.cache:get(consumer_cache_key, nil,
-                                                kong.client.load_consumer,
-                                                conf.anonymous, true)
-      if err then
-        kong.log.err("failed to load anonymous consumer:", err)
-        return kong.response.exit(500, { message = "An unexpected error occurred" })
-      end
-
-      set_consumer(consumer, nil, nil)
-
+  local token, _ = retrieve_token(ngx.req, conf)
+  if ok then
+    if token ~= nil then
+      -- set claim headers
+      set_claim_headers(token)
+    end
+  else
+    if token ~= nil then
+      -- if there is a token, do not fallback to anonymous
+      return responses.send(err.status, err.message)
     else
-      return kong.response.exit(err.status, err.errors or { message = err.message })
+      if conf.anonymous then
+        -- get anonymous user
+        local consumer_cache_key = kong.db.consumers:cache_key(conf.anonymous)
+        local consumer, err      = kong.cache:get(consumer_cache_key, nil,
+                                                  kong.client.load_consumer,
+                                                  conf.anonymous, true)
+        if err then
+          kong.log.err("failed to load anonymous consumer:", err)
+          return kong.response.exit(500, { message = "An unexpected error occurred" })
+        end
+
+        set_consumer(consumer, nil, nil)
+
+      else
+        return kong.response.exit(err.status, err.errors or { message = err.message })
+      end
     end
   end
 end
 
 
-return JwtHandler
+return JwtCustomHandler
