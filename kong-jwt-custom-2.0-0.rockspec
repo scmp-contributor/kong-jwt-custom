@@ -22,7 +22,6 @@ build = {
     ["kong.plugins.jwt-custom.handler"] = "handler.lua",
     ["kong.plugins.jwt-custom.schema"]  = "schema.lua",
     ["kong.plugins.jwt-custom.asn_sequence"]  = "asn_sequence.lua",
-    ["kong.plugins.jwt-custom.daos"]  = "daos.lua",
     ["kong.plugins.jwt-custom.claim_headers"]  = "claim_headers.lua",
     ["kong.plugins.jwt-custom.jwt_parser"]  = "jwt_parser.lua"
   }
