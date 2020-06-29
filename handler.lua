@@ -261,8 +261,12 @@ function JwtCustomHandler:access(conf)
     return
   end
 
+  local token, err = retrieve_token(conf)
+  if err then
+    kong.log.err(err)
+    return kong.response.exit(500, { message = "An unexpected error occurred" })
+  end
   local ok, err = do_authentication(conf)
-  local token, _ = retrieve_token(ngx.req, conf)
   if ok then
     if token ~= nil then
       -- set claim headers
