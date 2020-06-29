@@ -1,5 +1,6 @@
 local constants = require "kong.constants"
 local jwt_decoder = require "kong.plugins.jwt-custom.jwt_parser"
+local jp = require "jsonpath"
 local claim_headers = require "kong.plugins.jwt-custom.claim_headers"
 
 local fmt = string.format
