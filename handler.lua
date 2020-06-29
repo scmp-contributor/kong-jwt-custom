@@ -238,6 +238,9 @@ local function set_claim_headers(token)
         if claims ~= nil then
           for json_path, request_header in pairs(claim_headers) do
             local claim_value = jp.value(claims, json_path)
+            if (type(claim_value) == "table") then
+              claim_value = table.concat(claim_value, ", ")
+            end
             if claim_value ~= nil then
               set_header(request_header, claim_value)
             else
