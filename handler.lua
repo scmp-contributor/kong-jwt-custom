@@ -261,11 +261,7 @@ function JwtCustomHandler:access(conf)
     return
   end
 
-  local token, err = retrieve_token(conf)
-  if err then
-    kong.log.err(err)
-    return kong.response.exit(500, { message = "An unexpected error occurred" })
-  end
+  local token, _ = retrieve_token(conf)
   local ok, err = do_authentication(conf)
   if ok then
     if token ~= nil then
@@ -275,7 +271,7 @@ function JwtCustomHandler:access(conf)
   else
     if token ~= nil then
       -- if there is a token, do not fallback to anonymous
-      return responses.send(err.status, err.message)
+      return kong.response.exit(err.status, err.errors or { message = err.message })
     else
       if conf.anonymous then
         -- get anonymous user
