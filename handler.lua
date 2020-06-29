@@ -227,6 +227,8 @@ local function do_authentication(conf)
 end
 
 local function set_claim_headers(token)
+  local set_header = kong.service.request.set_header
+  local clear_header = kong.service.request.clear_header
   -- Do nothing if no token
   if token ~= nil then
     local jwt, err = jwt_decoder:new(token)
@@ -237,7 +239,9 @@ local function set_claim_headers(token)
           for json_path, request_header in pairs(claim_headers) do
             local claim_value = jp.value(claims, json_path)
             if claim_value ~= nil then
-              ngx_set_header(request_header, claim_value)
+              set_header(request_header, claim_value)
+            else
+              clear_header(request_header)
             end
           end
         end
