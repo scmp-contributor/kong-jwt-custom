@@ -253,6 +253,13 @@ local function set_claim_headers(token)
   end
 end
 
+local function reset_claim_headers()
+  local clear_header = kong.service.request.clear_header
+  for json_path, request_header in pairs(claim_headers) do
+    clear_header(request_header)
+  end
+end
+
 function JwtCustomHandler:new()
   JwtCustomHandler.super.new(self, "jwt-custom")
 end
@@ -269,6 +276,8 @@ function JwtCustomHandler:access(conf)
     return
   end
 
+  -- reset claimer to prevent injections.
+  reset_claim_headers()
   local token, _ = retrieve_token(conf)
   local ok, err = do_authentication(conf)
   if ok then
