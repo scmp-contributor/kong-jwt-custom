@@ -1,10 +1,10 @@
 package = "kong-jwt-custom"
-version = "2.0.1"
+version = "2.0-2"
 source = {
-  url = "https://github.com/scmp-contributor/kong-jwt-custom/archive/v2.0.1.tar.gz",
-  file = "v2.0.1.tar.gz",
-  dir = "kong-jwt-custom-2.0.1",
-  tag = "v2.0.1"
+  url = "https://github.com/scmp-contributor/kong-jwt-custom/archive/v2.0.2.tar.gz",
+  file = "v2.0.2.tar.gz",
+  dir = "kong-jwt-custom-2.0.2",
+  tag = "v2.0.2"
 }
 description = {
   summary = "A Kong JWT plugin with added claims to request headers",
