@@ -270,14 +270,15 @@ function JwtCustomHandler:access(conf)
     return
   end
 
+  -- reset claimer to prevent injections.
+  reset_claim_headers()
+
   if conf.anonymous and kong.client.get_credential() then
     -- we're already authenticated, and we're configured for using anonymous,
     -- hence we're in a logical OR between auth methods and we're already done.
     return
   end
 
-  -- reset claimer to prevent injections.
-  reset_claim_headers()
   local token, _ = retrieve_token(conf)
   local ok, err = do_authentication(conf)
   if ok then
