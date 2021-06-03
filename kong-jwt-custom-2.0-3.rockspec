@@ -2,7 +2,7 @@ package = "kong-jwt-custom"
 version = "2.0-3"
 source = {
   url = "https://github.com/scmp-contributor/kong-jwt-custom/archive/v2.0.3.tar.gz",
-  file = "v2.0.3ar.gz",
+  file = "v2.0.3.tar.gz",
   dir = "kong-jwt-custom-2.0.3",
   tag = "v2.0.3"
 }
