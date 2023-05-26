@@ -1,35 +1,45 @@
 local constants = require "kong.constants"
-local jwt_decoder = require "kong.plugins.jwt-custom.jwt_parser"
-local jp = require "jsonpath"
-local claim_headers = require "kong.plugins.jwt-custom.claim_headers"
+local jwt_decoder = require "kong.plugins.jwt.jwt_parser"
+
 
 local fmt = string.format
 local kong = kong
 local type = type
+local error = error
 local ipairs = ipairs
+local pairs = pairs
 local tostring = tostring
 local re_gmatch = ngx.re.gmatch
 
 
-local JwtCustomHandler = {}
-
-
-JwtCustomHandler.PRIORITY = 1004
-JwtCustomHandler.VERSION = "2.0.0"
+local JwtHandler = {
+  VERSION = "3.0.0",
+  PRIORITY = 1450,
+}
 
 
 --- Retrieve a JWT in a request.
 -- Checks for the JWT in URI parameters, then in cookies, and finally
 -- in the configured header_names (defaults to `[Authorization]`).
--- @param request ngx request object
 -- @param conf Plugin configuration
 -- @return token JWT token contained in request (can be a table) or nil
 -- @return err
-local function retrieve_token(conf)
+local function retrieve_tokens(conf)
+  local token_set = {}
   local args = kong.request.get_query()
   for _, v in ipairs(conf.uri_param_names) do
-    if args[v] then
-      return args[v]
+    local token = args[v] -- can be a table
+    if token then
+      if type(token) == "table" then
+        for _, t in ipairs(token) do
+          if t ~= "" then
+            token_set[t] = true
+          end
+        end
+
+      elseif token ~= "" then
+        token_set[token] = true
+      end
     end
   end
 
@@ -37,7 +47,7 @@ local function retrieve_token(conf)
   for _, v in ipairs(conf.cookie_names) do
     local cookie = var["cookie_" .. v]
     if cookie and cookie ~= "" then
-      return cookie
+      token_set[cookie] = true
     end
   end
 
@@ -61,10 +71,29 @@ local function retrieve_token(conf)
       end
 
       if m and #m > 0 then
-        return m[1]
+        if m[1] ~= "" then
+          token_set[m[1]] = true
+        end
       end
     end
   end
+
+  local tokens_n = 0
+  local tokens = {}
+  for token, _ in pairs(token_set) do
+    tokens_n = tokens_n + 1
+    tokens[tokens_n] = token
+  end
+
+  if tokens_n == 0 then
+    return nil
+  end
+
+  if tokens_n == 1 then
+    return tokens[1]
+  end
+
+  return tokens
 end
 
 
@@ -78,6 +107,8 @@ end
 
 
 local function set_consumer(consumer, credential, token)
+  kong.client.authenticate(consumer, credential)
+
   local set_header = kong.service.request.set_header
   local clear_header = kong.service.request.clear_header
 
@@ -99,32 +130,26 @@ local function set_consumer(consumer, credential, token)
     clear_header(constants.HEADERS.CONSUMER_USERNAME)
   end
 
-  kong.client.authenticate(consumer, credential)
-
-  if credential then
-    kong.ctx.shared.authenticated_jwt_token = token -- TODO: wrap in a PDK function?
-    ngx.ctx.authenticated_jwt_token = token  -- backward compatibility only
-
-    if credential.key then
-      set_header(constants.HEADERS.CREDENTIAL_IDENTIFIER, credential.key)
-    else
-      clear_header(constants.HEADERS.CREDENTIAL_IDENTIFIER)
-    end
-
-    clear_header(constants.HEADERS.ANONYMOUS)
-
+  if credential and credential.key then
+    set_header(constants.HEADERS.CREDENTIAL_IDENTIFIER, credential.key)
   else
     clear_header(constants.HEADERS.CREDENTIAL_IDENTIFIER)
+  end
+
+  if credential then
+    clear_header(constants.HEADERS.ANONYMOUS)
+  else
     set_header(constants.HEADERS.ANONYMOUS, true)
   end
+
+  kong.ctx.shared.authenticated_jwt_token = token -- TODO: wrap in a PDK function?
 end
 
 
 local function do_authentication(conf)
-  local token, err = retrieve_token(conf)
+  local token, err = retrieve_tokens(conf)
   if err then
-    kong.log.err(err)
-    return kong.response.exit(500, { message = "An unexpected error occurred" })
+    return error(err)
   end
 
   local token_type = type(token)
@@ -159,8 +184,7 @@ local function do_authentication(conf)
   local jwt_secret, err      = kong.cache:get(jwt_secret_cache_key, nil,
                                               load_credential, jwt_secret_key)
   if err then
-    kong.log.err(err)
-    return kong.response.exit(500, { message = "An unexpected error occurred" })
+    return error(err)
   end
 
   if not jwt_secret then
@@ -171,7 +195,7 @@ local function do_authentication(conf)
 
   -- Verify "alg"
   if jwt.header.alg ~= algorithm then
-    return false, {status = 401, message = "Invalid algorithm"}
+    return false, { status = 401, message = "Invalid algorithm" }
   end
 
   local jwt_secret_value = algorithm ~= nil and algorithm:sub(1, 2) == "HS" and
@@ -210,7 +234,7 @@ local function do_authentication(conf)
                                             kong.client.load_consumer,
                                             jwt_secret.consumer.id, true)
   if err then
-    return kong.response.exit(500, { message = "An unexpected error occurred" })
+    return error(err)
   end
 
   -- However this should not happen
@@ -226,52 +250,12 @@ local function do_authentication(conf)
   return true
 end
 
-local function set_claim_headers(token)
-  local set_header = kong.service.request.set_header
-  local clear_header = kong.service.request.clear_header
-  -- Do nothing if no token
-  if token ~= nil then
-    local jwt, err = jwt_decoder:new(token)
-    if not err then
-      if jwt ~= nil then
-        local claims = jwt.claims
-        if claims ~= nil then
-          for json_path, request_header in pairs(claim_headers) do
-            local claim_value = jp.value(claims, json_path)
-            if (type(claim_value) == "table") then
-              claim_value = table.concat(claim_value, ", ")
-            end
-            if claim_value ~= nil then
-              set_header(request_header, claim_value)
-            else
-              clear_header(request_header)
-            end
-          end
-        end
-      end
-    end
-  end
-end
 
-local function reset_claim_headers()
-  local clear_header = kong.service.request.clear_header
-  for json_path, request_header in pairs(claim_headers) do
-    clear_header(request_header)
-  end
-end
-
-function JwtCustomHandler:new()
-  JwtCustomHandler.super.new(self, "jwt-custom")
-end
-
-function JwtCustomHandler:access(conf)
+function JwtHandler:access(conf)
   -- check if preflight request and whether it should be authenticated
   if not conf.run_on_preflight and kong.request.get_method() == "OPTIONS" then
     return
   end
-
-  -- reset claimer to prevent injections.
-  reset_claim_headers()
 
   if conf.anonymous and kong.client.get_credential() then
     -- we're already authenticated, and we're configured for using anonymous,
@@ -279,37 +263,25 @@ function JwtCustomHandler:access(conf)
     return
   end
 
-  local token, _ = retrieve_token(conf)
   local ok, err = do_authentication(conf)
-  if ok then
-    if token ~= nil then
-      -- set claim headers
-      set_claim_headers(token)
-    end
-  else
-    if token ~= nil then
-      -- if there is a token, do not fallback to anonymous
-      return kong.response.exit(err.status, err.errors or { message = err.message })
-    else
-      if conf.anonymous then
-        -- get anonymous user
-        local consumer_cache_key = kong.db.consumers:cache_key(conf.anonymous)
-        local consumer, err      = kong.cache:get(consumer_cache_key, nil,
-                                                  kong.client.load_consumer,
-                                                  conf.anonymous, true)
-        if err then
-          kong.log.err("failed to load anonymous consumer:", err)
-          return kong.response.exit(500, { message = "An unexpected error occurred" })
-        end
-
-        set_consumer(consumer, nil, nil)
-
-      else
-        return kong.response.exit(err.status, err.errors or { message = err.message })
+  if not ok then
+    if conf.anonymous then
+      -- get anonymous user
+      local consumer_cache_key = kong.db.consumers:cache_key(conf.anonymous)
+      local consumer, err      = kong.cache:get(consumer_cache_key, nil,
+                                                kong.client.load_consumer,
+                                                conf.anonymous, true)
+      if err then
+        return error(err)
       end
+
+      set_consumer(consumer)
+
+    else
+      return kong.response.exit(err.status, err.errors or { message = err.message })
     end
   end
 end
 
 
-return JwtCustomHandler
+return JwtHandler
