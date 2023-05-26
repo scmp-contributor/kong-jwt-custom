@@ -147,12 +147,7 @@ local function set_consumer(consumer, credential, token)
 end
 
 
-local function do_authentication(conf)
-  local token, err = retrieve_tokens(conf)
-  if err then
-    return error(err)
-  end
-
+local function do_authentication(token, conf)
   local token_type = type(token)
   if token_type ~= "string" then
     if token_type == "nil" then
@@ -267,8 +262,17 @@ function JwtHandler:access(conf)
     return
   end
 
-  local jwt, err = do_authentication(conf)
+  local token, err = retrieve_tokens(conf)
+  if err then
+    return error(err)
+  end
+
+  local jwt, err = do_authentication(token, conf)
   if not jwt then
+    if token then
+      return kong.response.exit(err.status, err.errors or { message = err.message })
+    end
+
     if conf.anonymous then
       -- get anonymous user
       local consumer_cache_key = kong.db.consumers:cache_key(conf.anonymous)
