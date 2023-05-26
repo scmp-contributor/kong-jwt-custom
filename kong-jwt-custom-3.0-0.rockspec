@@ -19,6 +19,7 @@ dependencies = {
 build = {
   type = "builtin",
   modules = {
+    ["kong.plugins.jwt-custom.claim_headers"]  = "claim_headers.lua",
     ["kong.plugins.jwt-custom.daos"]  = "daos.lua",
     ["kong.plugins.jwt-custom.handler"] = "handler.lua",
     ["kong.plugins.jwt-custom.jwt_parser"]  = "jwt_parser.lua",

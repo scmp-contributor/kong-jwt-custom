@@ -1,5 +1,6 @@
 local constants = require "kong.constants"
 local jwt_decoder = require "kong.plugins.jwt.jwt_parser"
+local claim_headers = require "kong.plugins.jwt-custom.claim_headers"
 
 
 local fmt = string.format
@@ -247,7 +248,7 @@ local function do_authentication(conf)
 
   set_consumer(consumer, jwt_secret, token)
 
-  return true
+  return jwt
 end
 
 
@@ -257,14 +258,17 @@ function JwtHandler:access(conf)
     return
   end
 
+  -- reset claim headers to prevent injections.
+  claim_headers.reset()
+
   if conf.anonymous and kong.client.get_credential() then
     -- we're already authenticated, and we're configured for using anonymous,
     -- hence we're in a logical OR between auth methods and we're already done.
     return
   end
 
-  local ok, err = do_authentication(conf)
-  if not ok then
+  local jwt, err = do_authentication(conf)
+  if not jwt then
     if conf.anonymous then
       -- get anonymous user
       local consumer_cache_key = kong.db.consumers:cache_key(conf.anonymous)
@@ -281,6 +285,9 @@ function JwtHandler:access(conf)
       return kong.response.exit(err.status, err.errors or { message = err.message })
     end
   end
+
+  -- set claim headers
+  claim_headers.set(jwt)
 end
 
 
